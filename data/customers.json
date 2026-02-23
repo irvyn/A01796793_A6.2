@@ -1,14 +1,8 @@
 [
   {
     "id": "C001",
-    "name": "Ana López",
-    "email": "ana.lopez@gmail.com",
-    "phone": "+52-614-191-2662"
-  },
-  {
-    "id": "C002",
-    "name": "Irving Garcia",
-    "email": "irving@gmail.com",
-    "phone": "+52-614-233-3454"
+    "name": "Cliente Uno",
+    "email": "c1@example.com",
+    "phone": "111"
   }
 ]

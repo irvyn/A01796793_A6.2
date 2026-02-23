@@ -4,17 +4,8 @@
     "hotel_id": "H001",
     "customer_id": "C001",
     "room_number": 101,
-    "check_in": "2026-03-01",
-    "check_out": "2026-03-03",
+    "check_in": "2026-02-23",
+    "check_out": "2026-02-25",
     "status": "ACTIVE"
-  },
-  {
-    "id": "R002",
-    "hotel_id": "H002",
-    "customer_id": "C002",
-    "room_number": 201,
-    "check_in": "2026-02-12",
-    "check_out": "2026-02-15",
-    "status": "CANCELLED"
   }
 ]
