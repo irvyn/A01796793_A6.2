@@ -1,3 +1,7 @@
+"""Unit tests for src.models core behaviors.
+
+Covers JSON load/save, validations, error handling and roundtrip serialization.
+"""
 import io
 import os
 import unittest
@@ -13,10 +17,20 @@ from src.models import (
 )
 
 
-class TestModels(unittest.TestCase):
-    def setUp(self):
-        os.makedirs(DATA_DIR, exist_ok=True)
+def _capture_stdout(func, *args, **kwargs) -> tuple[str, any]:
+    """Run func(*args, **kwargs) capturing stdout."""
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        result = func(*args, **kwargs)
+    return buf.getvalue(), result
 
+
+class TestModels(unittest.TestCase):
+    """Tests for Hotel, Customer and Reservation models."""
+
+    def setUp(self):
+        """Prepare clean JSON files and baseline entities before each test."""
+        os.makedirs(DATA_DIR, exist_ok=True)
         self.hotels_data = [
             {
                 "id": "H001",
@@ -47,11 +61,21 @@ class TestModels(unittest.TestCase):
             }
         ]
 
-        _safe_save_json(os.path.join(DATA_DIR, "hotels.json"), self.hotels_data)
-        _safe_save_json(os.path.join(DATA_DIR, "customers.json"), self.customers_data)
-        _safe_save_json(os.path.join(DATA_DIR, "reservations.json"), self.reservations_data)
+        _safe_save_json(
+            os.path.join(DATA_DIR, "hotels.json"),
+            self.hotels_data,
+        )
+        _safe_save_json(
+            os.path.join(DATA_DIR, "customers.json"),
+            self.customers_data,
+        )
+        _safe_save_json(
+            os.path.join(DATA_DIR, "reservations.json"),
+            self.reservations_data,
+        )
 
     def test_load_all_ok(self):
+        """Load baseline JSON data for all entities."""
         hotels = Hotel.load_all()
         customers = Customer.load_all()
         reservations = Reservation.load_all()
@@ -64,8 +88,17 @@ class TestModels(unittest.TestCase):
         self.assertEqual(reservations[0].status, "ACTIVE")
 
     def test_save_and_reload_hotel(self):
+        """Append a new hotel, save and reload to verify persistence."""
         hotels = Hotel.load_all()
-        hotels.append(Hotel(id="H002", name="Nuevo", city="Cuauhtémoc", total_rooms=5, available_rooms=5))
+        hotels.append(
+            Hotel(
+                id="H002",
+                name="Nuevo",
+                city="Cuauhtémoc",
+                total_rooms=5,
+                available_rooms=5,
+            )
+        )
         Hotel.save_all(hotels)
 
         reloaded = Hotel.load_all()
@@ -73,10 +106,18 @@ class TestModels(unittest.TestCase):
         self.assertIn("H002", ids)
 
     def test_hotel_validation_available_not_exceed_total(self):
+        """available_rooms must not exceed total_rooms."""
         with self.assertRaises(ValueError):
-            Hotel(id="HX", name="X", city="Y", total_rooms=2, available_rooms=3)
+            Hotel(
+                id="HX",
+                name="X",
+                city="Y",
+                total_rooms=2,
+                available_rooms=3,
+            )
 
     def test_reservation_invalid_dates(self):
+        """check_in must be earlier than check_out."""
         today = date.today()
         with self.assertRaises(ValueError):
             Reservation(
@@ -90,6 +131,7 @@ class TestModels(unittest.TestCase):
             )
 
     def test_reservation_invalid_status(self):
+        """Status must be either ACTIVE or CANCELLED."""
         today = date.today()
         with self.assertRaises(ValueError):
             Reservation(
@@ -103,21 +145,19 @@ class TestModels(unittest.TestCase):
             )
 
     def test_load_corrupted_json(self):
+        """Reading a corrupted JSON should print an error"""
         path = os.path.join(DATA_DIR, "hotels.json")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("{ this is not valid json }")
+        with open(path, "w", encoding="utf-8") as fhl:
+            fhl.write("{ this is not valid json }")
 
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            hotels = Hotel.load_all()
-        output = buf.getvalue()
-
+        out, hotels = _capture_stdout(Hotel.load_all)
         self.assertEqual(hotels, [])
-        self.assertIn("JSON inválido", output)
+        self.assertIn("JSON inválido", out)
 
     def test_reservation_to_from_dict_roundtrip(self):
+        """Roundtrip to_dict/from_dict should preserve key fields."""
         today = date.today()
-        r = Reservation(
+        rsv = Reservation(
             id="R10",
             hotel_id="H001",
             customer_id="C001",
@@ -126,11 +166,11 @@ class TestModels(unittest.TestCase):
             check_out=(today + timedelta(days=2)).isoformat(),
             status="ACTIVE",
         )
-        d = r.to_dict()
-        r2 = Reservation.from_dict(d)
-        self.assertEqual(r2.id, r.id)
-        self.assertEqual(r2.check_in, r.check_in)
-        self.assertEqual(r2.check_out, r.check_out)
+        dct = rsv.to_dict()
+        rsv2 = Reservation.from_dict(dct)
+        self.assertEqual(rsv2.id, rsv.id)
+        self.assertEqual(rsv2.check_in, rsv.check_in)
+        self.assertEqual(rsv2.check_out, rsv.check_out)
 
 
 if __name__ == "__main__":

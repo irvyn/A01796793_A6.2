@@ -1,7 +1,11 @@
+"""Console menu for demo and recording evidence.
+
+Provides minimal operations to list and create entities, and to
+demonstrate error handling with corrupted JSON files.
+"""
 from __future__ import annotations
 
 import os
-from datetime import date, timedelta
 
 from src.models import (
     Hotel,
@@ -11,42 +15,58 @@ from src.models import (
     find_hotel,
     find_customer,
     find_reservation,
-    _safe_save_json,
 )
 
 
 def list_hotels() -> None:
+    """List hotels with availability."""
     hotels = Hotel.load_all()
     if not hotels:
         print("No hay hoteles.")
         return
-    for h in hotels:
-        print(f"- {h.id} | {h.name} | {h.city} | {h.available_rooms}/{h.total_rooms} disponibles")
+    for htl in hotels:
+        info = (
+            f"- {htl.id} | {htl.name} | {htl.city} | "
+            f"{htl.available_rooms}/{htl.total_rooms} disponibles"
+        )
+        print(info)
 
 
 def list_customers() -> None:
+    """List customers."""
     customers = Customer.load_all()
     if not customers:
         print("No hay clientes.")
         return
-    for c in customers:
-        print(f"- {c.id} | {c.name} | {c.email} | {c.phone}")
+    for cust in customers:
+        info = (
+            f"- {cust.id} | {cust.name} | {cust.email} | "
+            f"{cust.phone}"
+        )
+        print(info)
 
 
 def list_reservations() -> None:
+    """List reservations with key fields."""
     reservations = Reservation.load_all()
     if not reservations:
         print("No hay reservaciones.")
         return
-    for r in reservations:
-        print(f"- {r.id} | Hotel={r.hotel_id} | Cliente={r.customer_id} | "
-              f"Habitación={r.room_number} | {r.check_in}→{r.check_out} | {r.status}")
+    for res in reservations:
+        info = (
+            f"- {res.id} | Hotel={res.hotel_id} | "
+            f"Cliente={res.customer_id} | "
+            f"Habitación={res.room_number} | "
+            f"{res.check_in}→{res.check_out} | {res.status}"
+        )
+        print(info)
 
 
 def create_hotel() -> None:
+    """Create a hotel (simple input prompts)."""
     hotels = Hotel.load_all()
-    _id = input("ID del hotel (ej. H010): ").strip()
-    if find_hotel(hotels, _id):
+    hid = input("ID del hotel (ej. H010): ").strip()
+    if find_hotel(hotels, hid):
         print("Error: ya existe un hotel con ese ID.")
         return
     name = input("Nombre: ").strip()
@@ -54,7 +74,15 @@ def create_hotel() -> None:
     total = int(input("Habitaciones totales: ").strip())
     available = int(input("Habitaciones disponibles: ").strip())
     try:
-        hotels.append(Hotel(id=_id, name=name, city=city, total_rooms=total, available_rooms=available))
+        hotels.append(
+            Hotel(
+                id=hid,
+                name=name,
+                city=city,
+                total_rooms=total,
+                available_rooms=available,
+            )
+        )
         Hotel.save_all(hotels)
         print("Hotel creado.")
     except ValueError as exc:
@@ -62,20 +90,24 @@ def create_hotel() -> None:
 
 
 def create_customer() -> None:
+    """Create a customer."""
     customers = Customer.load_all()
-    _id = input("ID del cliente (ej. C010): ").strip()
-    if find_customer(customers, _id):
+    cid = input("ID del cliente (ej. C010): ").strip()
+    if find_customer(customers, cid):
         print("Error: ya existe un cliente con ese ID.")
         return
     name = input("Nombre: ").strip()
     email = input("Email: ").strip()
     phone = input("Teléfono: ").strip()
-    customers.append(Customer(id=_id, name=name, email=email, phone=phone))
+    customers.append(
+        Customer(id=cid, name=name, email=email, phone=phone)
+    )
     Customer.save_all(customers)
     print("Cliente creado.")
 
 
 def create_reservation() -> None:
+    """Create a reservation (without availability logic)."""
     hotels = Hotel.load_all()
     customers = Customer.load_all()
     reservations = Reservation.load_all()
@@ -93,10 +125,10 @@ def create_reservation() -> None:
         print("Error: cliente no existe.")
         return
 
-    _id = f"R{100 + len(reservations) + 1:03d}"
+    new_id = f"R{100 + len(reservations) + 1:03d}"
     try:
         res = Reservation(
-            id=_id,
+            id=new_id,
             hotel_id=hotel_id,
             customer_id=customer_id,
             room_number=room,
@@ -112,6 +144,7 @@ def create_reservation() -> None:
 
 
 def cancel_reservation() -> None:
+    """Cancel a reservation by id."""
     reservations = Reservation.load_all()
     res_id = input("ID de la reserva: ").strip()
     res = find_reservation(reservations, res_id)
@@ -127,14 +160,15 @@ def cancel_reservation() -> None:
 
 
 def corrupt_hotels_file() -> None:
-    """Útil para grabar evidencia de manejo de errores al leer JSON corrupto."""
+    """Corrupt hotels.json to demonstrate error handling."""
     path = os.path.join(DATA_DIR, "hotels.json")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("{ this is not valid json }")
+    with open(path, "w", encoding="utf-8") as fhl:
+        fhl.write("{ this is not valid json }")
     print(f"Se corrompió intencionalmente: {path}")
 
 
 def menu() -> None:
+    """Loop over console options for the demo."""
     options = {
         "1": ("Listar hoteles", list_hotels),
         "2": ("Listar clientes", list_customers),
@@ -143,13 +177,16 @@ def menu() -> None:
         "5": ("Crear cliente", create_customer),
         "6": ("Crear reservación", create_reservation),
         "7": ("Cancelar reservación", cancel_reservation),
-        "8": ("Corromper hotels.json (para evidencia de errores)", corrupt_hotels_file),
+        "8": (
+            "Corromper hotels.json (para evidencia de errores)",
+            corrupt_hotels_file,
+        ),
         "0": ("Salir", None),
     }
     while True:
         print("\n=== Sistema de Reservaciones (demo) ===")
-        for k, (label, _) in options.items():
-            print(f"{k}) {label}")
+        for key, (label, _) in options.items():
+            print(f"{key}) {label}")
         choice = input("Elige una opción: ").strip()
         if choice == "0":
             print("Adiós.")
@@ -161,7 +198,9 @@ def menu() -> None:
         _, fn = action
         try:
             fn()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            # Mantener ejecución siempre en la demo.
+            # Se imprime el error y el menú continúa.
             print(f"Error inesperado: {exc}")
 
 
